@@ -1,7 +1,5 @@
 #!/usr/bin/
-
 import sys, json, random
-
 from myhttplib import getPage
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -10,26 +8,28 @@ from selenium.webdriver.support.ui import WebDriverWait # available since 2.4.0
 from selenium.webdriver.support import expected_conditions as EC # available since 2.26.0
 from selenium.webdriver.common.proxy import *
 from time import sleep
-#from postGetter import getPage
 
 TIMEOUT_ = 20 #20 second timeout to wait
 
 class ServiceAutomator():
-	def __init__(self, baseUrl, commandStr, driver="firefox", verbose=False, dont_close=False, proxy=None):
+	def __init__(self, baseUrl, commandStr, browser="firefox", verbose=False, dont_close=False, proxy=None):
 		self.verbose = verbose
 		self.dont_close = dont_close
 		self.address = "/bbb"								#address of services page
 		if self.verbose:
 			print "Initializing %s automator" %(ServiceAutomator.__name__)
 			print "Base url:",baseUrl
-			print "Will be using", driver, "as webdriver"
+			print "Will be using",browser,"as browser"
 	
 		try:
-			if proxy: self.setProxy(proxy)
-			elif driver == "chrome":
+			if proxy: self.setProxy(proxy,browser)
+			elif browser == "chrome":
 				self.driver = webdriver.Chrome()
-			else:
+			elif browser == "firefox":
 				self.driver = webdriver.Firefox()
+			else:
+				print "Invalid driver",browser,"will quit"
+				sys.exit(0)
 		except Exception, e:
 			print e
 			sys.exit(0)
@@ -56,30 +56,9 @@ class ServiceAutomator():
 		btn = driver.find_element_by_xpath(xpath)
 		btn.click()
 
-		#selecting which service category to continue
-		base_xpath = """//*[@id="pagecontainer"]/section/form/blockquote/label[%d]/input"""
-		if self.category == 'service_automotive': xpath = base_xpath %(1)
-		elif self.category == 'service_beauty': xpath = base_xpath %(2)
-		elif self.category == 'service_computer': xpath = base_xpath %(3)
-		elif self.category == 'service_creative': xpath = base_xpath %(4)
-		elif self.category == 'service_cycle': xpath = base_xpath %(5)
-		elif self.category == 'service_event': xpath = base_xpath %(6)
-		elif self.category == 'service_farm': xpath = base_xpath %(7)
-		elif self.category == 'service_financial': xpath = base_xpath %(8)
-		elif self.category == 'service_household': xpath = base_xpath %(9)
-		elif self.category == 'service_labor': xpath = base_xpath %(10)
-		elif self.category == 'service_legal': xpath = base_xpath %(11)
-		elif self.category == 'service_lessons': xpath = base_xpath %(12)
-		elif self.category == 'service_marine': xpath = base_xpath %(13)
-		elif self.category == 'service_pet': xpath = base_xpath %(14)
-		elif self.category == 'service_real_estate': xpath = base_xpath %(15)
-		elif self.category == 'service_skill': xpath = base_xpath %(16)
-		elif self.category == 'service_small_biz_ads': xpath = base_xpath %(17)
-		elif self.category == 'service_therapeutic': xpath = base_xpath %(18)
-		elif self.category == 'service_travel': xpath = base_xpath %(19)
-		elif self.category == 'service_write': xpath = base_xpath %(20)
+		#xpath for service_labor
+		xpath = """//*[@id="pagecontainer"]/section/form/blockquote/label[10]/input"""
 
-		if self.verbose: print "Category Selected:", self.category
 		try:
 			btn = WebDriverWait(driver,TIMEOUT_).until(EC.presence_of_element_located((By.XPATH, xpath)))
 		except Exception, e:
@@ -178,6 +157,14 @@ class ServiceAutomator():
 		self.finish()
 		self.verifyEmail()
 
+		if not self.dont_close:
+			close_time = random.randint(1,3)
+			print "Closing browser in ",close_time,"seconds..."
+			sleep(close_time)
+			self.driver.close()
+		else:
+			print "Will not close browser"
+
 	def uploadImages(self):
 		if self.verbose: print "Uploading images..."
 		print self.commands['images']
@@ -189,8 +176,8 @@ class ServiceAutomator():
 				print "Timeout Error. Page took to long to load. Try again later. Will terminate"
 				sys.exit(0)
 			inpt.send_keys(img)
-			if self.verbose: print "Waiting for a few seconds..."
-			sleep(10)
+			if self.verbose: print "Waiting for a few seconds till image uploads..."
+			sleep(random.randint(50,120))
 			inpt = WebDriverWait(self.driver,TIMEOUT_).until(EC.presence_of_element_located((By.XPATH, self.upload_xpath)))
 
 	def loadCommands(self, commands):
@@ -221,19 +208,31 @@ class ServiceAutomator():
 			if self.verbose: print "Quiting browser..."
 			self.driver.quit()
 
-	def setProxy(self, myproxy):
+	def setProxy(self, myproxy,browser):
 		if self.verbose: print "Attempting to set proxy to", myproxy
 		
-		proxy = Proxy({
-		    'proxyType': ProxyType.MANUAL,
-		    'httpProxy': myproxy,
-		    'ftpProxy': myproxy,
-		    'sslProxy': myproxy,
-		    'noProxy': '' # set this value as desired
-		    })
+		if browser == "firefox":
+			proxy = Proxy({
+			    'proxyType': ProxyType.MANUAL,
+			    'httpProxy': myproxy,
+			    'ftpProxy': myproxy,
+			    'sslProxy': myproxy,
+			    'noProxy': '' # set this value as desired
+			    })
 
-		self.driver = webdriver.Firefox(proxy=proxy)
-		if self.verbose: print "Firefox proxy is set to",myproxy
+			self.driver = webdriver.Firefox(proxy=proxy)
+		elif driver == "chrome":
+			webdriver.DesiredCapabilities.INTERNETEXPLORER['proxy'] = {
+			    "httpProxy":myproxy,
+			    "ftpProxy":myproxy,
+			    "sslProxy":myproxy,
+			    "noProxy":None,
+			    "proxyType":"MANUAL",
+			    "class":"org.openqa.selenium.Proxy",
+			    "autodetect":False
+			}
+			self.driver = webdriver.Chrome()
+		if self.verbose: print browser,"proxy is set to",myproxy
 
 	def login(self, username, password):
 		"""Goes to the main account page, and checks if the logged in account is the same as the
@@ -280,13 +279,13 @@ class ServiceAutomator():
 		if self.verbose: print "Logged in completed!"
 
 	def verifyEmail(self):
-		if self.verbose: print "Prompting server to verify email...."
-		time_to_wait = ranndom.randint(120-200)
+		if self.verbose: print "Prompting server to verify email..."
+		time_to_wait = random.randint(140,200)
 		if self.verbose: print "Will wait for", time_to_wait, "seconds"
 		sleep(time_to_wait)
-		if self.verbose: print "Connecting to server"
+		if self.verbose: print "Connecting to server..."
 		url = "http://%s/ws.php?action=get_post_confirm_url_via_email&schedule_id=%s"%(self.commands['poster_address'], self.commands['schedule_id'])
 		response = getPage(url)
 		if self.verbose: print "Response:", response
-
-
+		if response['status'] == 'true':
+			print "Server responded OK for verification!"
