@@ -285,7 +285,7 @@ class ServiceAutomator():
 		sleep(time_to_wait)
 		if self.verbose: print "Connecting to server..."
 		url = "http://%s/ws.php?action=get_post_confirm_url_via_email&schedule_id=%s"%(self.commands['poster_address'], self.commands['schedule_id'])
-		response = getPage(url)
+		response = json.loads(getPage(url))
 		if self.verbose: print "Response:", response
 		if response['status'] == 'true':
 			print "Server responded OK for verification!"
