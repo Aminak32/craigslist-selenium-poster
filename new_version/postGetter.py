@@ -50,7 +50,7 @@ def main():
     commands['images'] = [img_path]
     commands['poster_address'] = poster_address
 
-    serv_automator = ServiceAutomator(base_url, commands, browser=cli_args.browser, verbose=verbose, dont_close=True, proxy=proxy_)
+    serv_automator = ServiceAutomator(base_url, commands, browser=cli_args.browser, verbose=verbose, dont_close=cli_args.dont_close, proxy=proxy_)
     serv_automator.automate()
 
 #downloads the image from img_url and returns path of file
