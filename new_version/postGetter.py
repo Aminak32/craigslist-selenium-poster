@@ -28,7 +28,7 @@ def main():
     modes.append("no_proxy")
   if cli_args.verbose:
     modes.append("verbose")
-  if cli_args.verbose: print "Modes selected:", ",".join(modes)
+  if cli_args.verbose: print "Modes selected:", ", ".join(modes)
   postMain(poster_address, cli_args.browser, cli_args.records, cli_args.dont_close, cli_args.no_proxy, cli_args.verbose)
 
 def postMain(poster_address, browser, records, dont_close, no_proxy, verbose=False):

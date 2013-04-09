@@ -153,7 +153,9 @@ class ServiceAutomator():
 
 		self.uploadImages()
 		self.finish()
-		if self.verifyEmail():
+		clink = self.verifyEmail()
+		if clink:
+			self.openConfirmLink(clink)
 			self.updateServer(40, "OK")
 		else:
 			self.updateServer(90, "FAILED! NOT OK")
@@ -287,11 +289,18 @@ class ServiceAutomator():
 			sleep(30) #sleep 3mins
 		if self.verbose: print "Connecting to server..."
 		url = "http://%s/ws.php?action=get_post_confirm_url_via_email&schedule_id=%s"%(self.commands['poster_address'], self.commands['schedule_id'])
-		response = json.loads(getPage(url),self.verbose)
+		response = json.loads(getPage(url,self.verbose))
 		if self.verbose: print "Response:", response
 		if response['status']:
 			print "Server responded OK for verification!"
-			return True
+			return response['confirmation_link']
+
+	def openConfirmLink(self, url):
+		if self.verbose: print "Confirming",url
+		print "Function not yet finished... does nothing as of the moment"
+		#self.driver.get(url)
+		#accept_xpath = ""
+		#btn = WebDriverWait(self.driver,TIMEOUT_).until(EC.presence_of_element_located((By.XPATH, password_xpath)))
 
 	def updateServer(self,status, comments):
 		values_ = {"poster_address":self.commands['poster_address'],
