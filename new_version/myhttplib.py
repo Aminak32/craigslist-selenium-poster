@@ -29,6 +29,10 @@ def getPage(url,verbose=False,data=None):
     print "Error: ", e.message
     sys.exit(0)
 
+def timeoutQuit():
+  print "Timeout Error. Page took to long to load. Try again later. Will terminate"
+  sys.exit(0)
+
 #
 # IGNORE CODE BELOW
 # JUST HTTP RESPONSES CONVERTED TO STRING

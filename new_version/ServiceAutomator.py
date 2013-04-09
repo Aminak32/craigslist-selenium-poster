@@ -1,6 +1,7 @@
 #!/usr/bin/
 import sys, json, random
 from myhttplib import getPage
+from myhttplib import timeoutQuit
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException
@@ -62,8 +63,7 @@ class ServiceAutomator():
 		try:
 			btn = WebDriverWait(driver,TIMEOUT_).until(EC.presence_of_element_located((By.XPATH, xpath)))
 		except Exception, e:
-			print "Timeout Error. Page took to long to load. Try again later. Will terminate"
-			sys.exit(0)
+			timeoutQuit()
 		btn.click()
 
 		sleep(1)
@@ -77,8 +77,7 @@ class ServiceAutomator():
 		try:
 			btn = WebDriverWait(driver,TIMEOUT_).until(EC.presence_of_element_located((By.XPATH, xpath)))
 		except Exception, e:
-			print "Timeout Error. Page took to long to load. Try again later. Will terminate"
-			sys.exit(0)
+			timeoutQuit()
 		
 		btn.click()
 
@@ -88,8 +87,7 @@ class ServiceAutomator():
 		try:
 			btn = WebDriverWait(driver,TIMEOUT_).until(EC.presence_of_element_located((By.XPATH, xpath)))
 		except Exception, e:
-			print "Timeout Error. Page took to long to load. Try again later. Will terminate"
-			sys.exit(0)
+			timeoutQuit()
 
 		#Write stuff to text inputs
 		if self.verbose: print "Loading xpaths of text inputs"
@@ -155,13 +153,19 @@ class ServiceAutomator():
 
 		self.uploadImages()
 		self.finish()
-		self.verifyEmail()
+		if self.verifyEmail():
+			self.updateServer(40, "OK")
+		else:
+			self.updateServer(90, "FAILED! NOT OK")
 
 		if not self.dont_close:
 			close_time = random.randint(1,3)
 			print "Closing browser in ",close_time,"seconds..."
 			sleep(close_time)
-			self.driver.close()
+			try:
+				self.driver.close()
+			except Exception, e:
+				print "Error occured in closing browser..."
 		else:
 			print "Will not close browser"
 
@@ -192,16 +196,14 @@ class ServiceAutomator():
 		try:
 			btn = WebDriverWait(self.driver,TIMEOUT_).until(EC.presence_of_element_located((By.XPATH, self.done_xpath)))
 		except Exception, e:
-			print "Timeout Error. Page took to long to load. Try again later. Will terminate"
-			sys.exit(0)
+			timeoutQuit()
 		btn.click()
 
 		if self.verbose: print "Publishing post..."
 		try:
 			btn = WebDriverWait(self.driver,TIMEOUT_).until(EC.presence_of_element_located((By.XPATH, self.publish_xpath)))
 		except Exception, e:
-			print "Timeout Error. Page took to long to load. Try again later. Will terminate"
-			sys.exit(0)
+			timeoutQuit()
 		btn.click()
 
 		if not self.dont_close:
@@ -265,13 +267,13 @@ class ServiceAutomator():
 		form_xpath = """//*[@id="pagecontainer"]/section/form"""
 		try:
 			btn = WebDriverWait(self.driver,TIMEOUT_).until(EC.presence_of_element_located((By.XPATH, username_xpath)))
+			btn.send_keys(username)
+			btn = WebDriverWait(self.driver,TIMEOUT_).until(EC.presence_of_element_located((By.XPATH, password_xpath)))
+			btn.send_keys(password)
 		except Exception, e:
-			print "Timeout Error. Page took to long to load. Try again later. Will terminate"
-			sys.exit(0)
+			timeoutQuit()
 
-		btn.send_keys(username)
-		btn = self.driver.find_element_by_xpath(password_xpath)
-		btn.send_keys(password)
+		#btn = self.driver.find_element_by_xpath(password_xpath)		
 
 		form = self.driver.find_element_by_xpath(form_xpath)
 		form.submit()
@@ -280,12 +282,26 @@ class ServiceAutomator():
 
 	def verifyEmail(self):
 		if self.verbose: print "Prompting server to verify email..."
-		time_to_wait = random.randint(140,200)
-		if self.verbose: print "Will wait for", time_to_wait, "seconds"
-		sleep(time_to_wait)
+		for i in range(6):
+			if self.verbose: print "%d seconds to wait..."%((6-i)*30)
+			sleep(30) #sleep 3mins
 		if self.verbose: print "Connecting to server..."
 		url = "http://%s/ws.php?action=get_post_confirm_url_via_email&schedule_id=%s"%(self.commands['poster_address'], self.commands['schedule_id'])
-		response = json.loads(getPage(url))
+		response = json.loads(getPage(url),self.verbose)
 		if self.verbose: print "Response:", response
-		if response['status'] == 'true':
+		if response['status']:
 			print "Server responded OK for verification!"
+			return True
+
+	def updateServer(self,status, comments):
+		values_ = {"poster_address":self.commands['poster_address'],
+					"schedule_id":self.commands['schedule_id'],
+					"status":status,
+					"account_id":self.commands['account_id'],
+					"comments":comments,
+					"cl_ad_id":"",
+					"ip":self.commands['proxy_ip']}
+		url = "http://%(poster_address)s/ws.php?action=update&sub=schedule&reference_id=%(schedule_id)s&status=%(status)d&account_id=%(account_id)s\
+				&comments=%(comments)s&cl_ad_id=%(cl_ad_id)s&ip=%(ip)s" % values_
+		response = getPage(url, self.verbose)
+		print response

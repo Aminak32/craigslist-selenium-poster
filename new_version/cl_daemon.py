@@ -15,6 +15,7 @@ parser.add_argument("-v","--verbose",help="print stuffs to stdout", action="stor
 parser.add_argument("-b","--browser", help="choose which browser to use", choices=["chrome","firefox"], default="firefox")
 parser.add_argument("-d","--dont_close", help="dont close the browser window after posting is finished", action="store_true")
 parser.add_argument("-r","--records",help="number of records to get from server",type=int, default=1)
+parser.add_argument("-n","--no_proxy", help="disable the use of proxy", action="store_true")
 parser.add_argument("-t","--delay",help="time delay before each post run (in seconds)", default=800)
 
 cli_args = parser.parse_args()
@@ -29,8 +30,7 @@ def main():
 def callPoster():
 	if cli_args.verbose: print "Creating new thread and starting post script..."
   	poster_address = cli_args.ip_address + ":" + cli_args.port
-  	browser = cli_args.browser
-  	postMain(poster_address, cli_args.browser, cli_args.records, cli_args.dont_close,verbose=cli_args.verbose)
+  	postMain(poster_address, cli_args.browser, cli_args.records, cli_args.dont_close,cli_args.no_proxy, verbose=cli_args.verbose)
 
 if __name__ == "__main__":
 	main()
